@@ -37,9 +37,9 @@ async function main() {
     const desktopFile = `${OUTPUT_DIR}/${id}-desktop.css`;
     const mobileFile = `${OUTPUT_DIR}/${id}-mobile.css`;
 
-    const desktopCommand = `npx critical ${BASE_URL}/?p=${id} --width=1300 --height=900 --minify --extract --timeout=30000 --timeoutRetry --target=${desktopFile}`;
-    const mobileCommand = `npx critical ${BASE_URL}/?p=${id} --width=390 --height=800 --minify --extract --timeout=30000 --timeoutRetry --target=${mobileFile}`;
-
+    const desktopCmd = `npx critical ${url} --width=1300 --height=900 --extract --target=${OUTPUT_DIR}/${postId}_desktop.css`;
+    const mobileCmd  = `npx critical ${url} --width=375 --height=667 --extract --target=${OUTPUT_DIR}/${postId}_mobile.css`;
+    
     console.log(`🔧 ${id} - 데스크탑`);
     const desktopSuccess = await runCriticalWithTimeout(desktopCommand, TIMEOUT_MS, RETRIES);
 
