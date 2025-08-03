@@ -1,36 +1,30 @@
-name: Generate & Upload Critical CSS
+name: Generate Critical CSS
 
 on:
   schedule:
-    - cron: '0 20 * * *'  # 한국 오전 5시 (UTC 20시)
+    - cron: '0 20 * * *'  # 매일 오전 5시 (한국 시간 UTC+9 → UTC 20시)
   workflow_dispatch:
 
 jobs:
-  critical-css:
+  generate-css:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repo
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Setup Node
-      uses: actions/setup-node@v3
-      with:
-        node-version: '20'
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
 
-    - name: Install Dependencies
-      run: npm install
+      - name: Install dependencies
+        run: npm install
 
-    - name: Run Critical CSS Generator
-      run: npm run generate
-
-    - name: Upload via SFTP
-      uses: pressidium/lftp-mirror-action@v1
-      with:
-        host: ${{ secrets.SFTP_HOST }}
-        port: ${{ secrets.SFTP_PORT }}
-        user: ${{ secrets.SFTP_USER }}
-        password: ${{ secrets.SFTP_PASS }}
-        localDir: 'critical-css'
-        remoteDir: '/public_html/wp-content/critical-css'
-        options: '--reverse --only-newer'
+      - name: Generate and upload critical CSS
+        env:
+          SFTP_HOST: ${{ secrets.SFTP_HOST }}
+          SFTP_PORT: ${{ secrets.SFTP_PORT }}
+          SFTP_USER: ${{ secrets.SFTP_USER }}
+          SFTP_PASS: ${{ secrets.SFTP_PASS }}
+        run: npm run generate
