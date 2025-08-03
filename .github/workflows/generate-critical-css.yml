@@ -1,9 +1,9 @@
 name: Generate Critical CSS
 
 on:
-  schedule:
-    - cron: '0 20 * * *'  # 매일 오전 5시 (한국시간)
   workflow_dispatch:
+  schedule:
+    - cron: '0 20 * * *' # 매일 오전 5시 (KST = UTC+9 → UTC 20시)
 
 jobs:
   generate-css:
@@ -13,17 +13,35 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '20'
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm install -g critical
+          mkdir -p output
 
-      - name: Generate & Upload critical CSS
+      - name: Get WordPress post IDs
+        id: fetch_ids
+        run: |
+          curl -s https://mathpowergen.com/wp-json/wp/v2/posts?per_page=100 \
+          | jq '.[].id' > post_ids.txt
+          echo "POST_IDS=$(cat post_ids.txt | paste -sd "," -)" >> $GITHUB_OUTPUT
+
+      - name: Generate Critical CSS
+        run: node generate.js
         env:
-          SFTP_HOST: ${{ secrets.SFTP_HOST }}
-          SFTP_USER: ${{ secrets.SFTP_USER }}
-          SFTP_PASS: ${{ secrets.SFTP_PASS }}
-        run: npm run generate
+          BASE_URL: 'https://mathpowergen.com'
+
+      - name: Zip all CSS files
+        run: |
+          cd output
+          zip -r ../critical-css.zip .
+
+      - name: Upload CSS zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: critical-css
+          path: critical-css.zip
