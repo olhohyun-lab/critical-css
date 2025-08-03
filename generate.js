@@ -11,9 +11,9 @@ const OUTPUT_DIR = 'output';
 const REMOTE_DIR = '/www/wp-content/critical-css';
 
 const {
-  SFTP_HOST,
-  SFTP_USER,
-  SFTP_PASS
+  FTP_HOST,
+  FTP_USER,
+  FTP_PASS
 } = process.env;
 
 const BATCH_SIZE = 20;
@@ -81,9 +81,9 @@ async function runCriticalWithTimeout(command, timeoutMs, retries = 1) {
 
     try {
       await client.access({
-        host: SFTP_HOST,
-        user: SFTP_USER,
-        password: SFTP_PASS,
+        host: FTP_HOST,
+        user: FTP_USER,
+        password: FTP_PASS,
         port: 21,
         secure: false,
       });
