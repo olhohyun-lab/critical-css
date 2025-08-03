@@ -1,59 +1,66 @@
 const fetch = require('node-fetch');
-const { writeFileSync } = require('fs');
+const fs = require('fs');
 const { execSync } = require('child_process');
-const Client = require('ssh2-sftp-client');
+const ftp = require('basic-ftp');
 const path = require('path');
 
 const BASE_URL = 'https://mathpowergen.com';
 const OUTPUT_DIR = 'output';
-const REMOTE_DIR = '/web/home/mathpowergen/html/wp-content/critical-css';
+const REMOTE_DIR = '/wp-content/critical-css';
 
-const sftp = new Client();
-
-// 환경변수
 const {
   SFTP_HOST,
-  SFTP_PORT,
   SFTP_USER,
   SFTP_PASS
 } = process.env;
 
 (async () => {
-  // WordPress REST API에서 포스트 목록 가져오기
-  const res = await fetch(`${BASE_URL}/wp-json/wp/v2/posts?per_page=100`);
+  const res = await fetch(`${BASE_URL}/wp-json/wp/v2/posts?per_page=100&_fields=id`);
   const posts = await res.json();
+  const sortedPosts = posts.sort((a, b) => a.id - b.id);
 
-  for (const post of posts) {
+  if (!fs.existsSync(OUTPUT_DIR)) {
+    fs.mkdirSync(OUTPUT_DIR);
+  }
+
+  for (const post of sortedPosts) {
     const postId = post.id;
     const url = `${BASE_URL}/?p=${postId}`;
-
     console.log(`🔍 Generating critical CSS for post ID: ${postId}`);
 
-    
-// Desktop
-execSync(`npx critical ${url} --width=1300 --height=900 --extract --target=${OUTPUT_DIR}/${postId}_desktop.css`);
-
-// Mobile
-execSync(`npx critical ${url} --width=375 --height=667 --extract --target=${OUTPUT_DIR}/${postId}_mobile.css`);
-  }
-  // FTP 업로드
-  await sftp.connect({
-    host: SFTP_HOST,
-    port: SFTP_PORT,
-    username: SFTP_USER,
-    password: SFTP_PASS,
-  });
-
-  for (const post of posts) {
-    const postId = post.id;
-    const remoteDesktopPath = `${REMOTE_DIR}/${postId}_desktop.css`;
-    const remoteMobilePath = `${REMOTE_DIR}/${postId}_mobile.css`;
-
-    await sftp.put(`${OUTPUT_DIR}/${postId}_desktop.css`, remoteDesktopPath);
-    await sftp.put(`${OUTPUT_DIR}/${postId}_mobile.css`, remoteMobilePath);
-
-    console.log(`✅ Uploaded critical CSS for post ${postId}`);
+    try {
+      execSync(`npx critical ${url} --width=1300 --height=900 --extract --target=${OUTPUT_DIR}/${postId}_desktop.css`);
+      execSync(`npx critical ${url} --width=375 --height=667 --extract --target=${OUTPUT_DIR}/${postId}_mobile.css`);
+    } catch (err) {
+      console.error(`❌ Failed to generate critical CSS for post ${postId}:`, err.message);
+    }
   }
 
-  await sftp.end();
+  const client = new ftp.Client();
+  client.ftp.verbose = false;
+
+  try {
+    await client.access({
+      host: SFTP_HOST,
+      user: SFTP_USER,
+      password: SFTP_PASS,
+      port: 21,
+      secure: false,
+    });
+
+    for (const post of sortedPosts) {
+      const postId = post.id;
+      try {
+        await client.uploadFrom(`${OUTPUT_DIR}/${postId}_desktop.css`, `${REMOTE_DIR}/${postId}_desktop.css`);
+        await client.uploadFrom(`${OUTPUT_DIR}/${postId}_mobile.css`, `${REMOTE_DIR}/${postId}_mobile.css`);
+        console.log(`✅ Uploaded CSS for post ${postId}`);
+      } catch (err) {
+        console.error(`❌ Failed to upload CSS for post ${postId}:`, err.message);
+      }
+    }
+
+    client.close();
+  } catch (err) {
+    console.error("❌ FTP connection failed:", err.message);
+  }
 })();
