@@ -9,9 +9,9 @@ const OUTPUT_DIR = 'output';
 const REMOTE_DIR = '/wp-content/critical-css';
 
 const {
-  SFTP_HOST,
-  SFTP_USER,
-  SFTP_PASS
+  FTP_HOST,
+  FTP_USER,
+  FTP_PASS
 } = process.env;
 
 (async () => {
