@@ -2,7 +2,7 @@ import fetch from 'node-fetch';
 import fs from 'fs';
 import { generate } from 'critical';
 
-const WP_API = 'https://yourdomain.com/wp-json/wp/v2/posts?per_page=100';
+const WP_API = 'https://mathpowergen.com/wp-json/wp/v2/posts?per_page=100';
 
 const fetchPosts = async () => {
   const res = await fetch(WP_API);
