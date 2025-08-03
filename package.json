@@ -5,8 +5,7 @@
     "generate": "node generate.js"
   },
   "dependencies": {
-    "node-fetch": "^2.6.9",
-    "critical": "^5.0.0",
-    "ssh2-sftp-client": "^9.0.4"
+    "basic-ftp": "^5.0.2",
+    "node-fetch": "^2.6.9"
   }
 }
