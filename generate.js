@@ -11,6 +11,21 @@ const OUTPUT_DIR = 'output';
 const BATCH_SIZE = 20;
 const TIMEOUT = 60_000; // 60초 제한
 
+async function fetchAllPosts() {
+  let page = 1;
+  const allPosts = [];
+
+  while (true) {
+    const res = await fetch(`${BASE_URL}/wp-json/wp/v2/posts?per_page=100&page=${page}&_fields=id`);
+    const posts = await res.json();
+    if (posts.length === 0) break;
+    allPosts.push(...posts);
+    page++;
+  }
+
+  return allPosts.sort((a, b) => a.id - b.id);
+}
+
 async function runCriticalWithTimeout(command, timeoutMs, retries = 1) {
   for (let attempt = 1; attempt <= retries + 1; attempt++) {
     try {
@@ -33,17 +48,15 @@ async function runCriticalWithTimeout(command, timeoutMs, retries = 1) {
 }
 
 (async () => {
-  const res = await fetch(`${BASE_URL}/wp-json/wp/v2/posts?per_page=100&_fields=id`);
-  const posts = await res.json();
-  const sortedPosts = posts.sort((a, b) => a.id - b.id);
+  const posts = await fetchAllPosts();
 
   if (!fs.existsSync(OUTPUT_DIR)) {
     fs.mkdirSync(OUTPUT_DIR);
   }
 
   const batches = [];
-  for (let i = 0; i < sortedPosts.length; i += BATCH_SIZE) {
-    batches.push(sortedPosts.slice(i, i + BATCH_SIZE));
+  for (let i = 0; i < posts.length; i += BATCH_SIZE) {
+    batches.push(posts.slice(i, i + BATCH_SIZE));
   }
 
   for (const batch of batches) {
