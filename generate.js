@@ -1,23 +1,13 @@
-const fetch = require('node-fetch');
 const fs = require('fs');
 const { exec } = require('child_process');
-const ftp = require('basic-ftp');
 const util = require('util');
 const path = require('path');
 
 const execPromise = util.promisify(exec);
-const BASE_URL = 'https://mathpowergen.com';
+const BASE_URL = process.env.BASE_URL;
 const OUTPUT_DIR = 'output';
-const REMOTE_DIR = '/www/wp-content/critical-css';
-
-const {
-  FTP_HOST,
-  FTP_USER,
-  FTP_PASS
-} = process.env;
-
-const BATCH_SIZE = 20;
-const TIMEOUT = 60_000; // 60초 제한
+const TIMEOUT_MS = 60_000;
+const RETRIES = 1;
 
 async function runCriticalWithTimeout(command, timeoutMs, retries = 1) {
   for (let attempt = 1; attempt <= retries + 1; attempt++) {
@@ -30,77 +20,36 @@ async function runCriticalWithTimeout(command, timeoutMs, retries = 1) {
       ]);
       return true;
     } catch (err) {
-      if (attempt > retries) {
-        console.error(`❌ [Timeout/Error] ${command} → ${err.message}`);
-        return false;
-      } else {
-        console.warn(`🔁 Retry (${attempt}/${retries}) for: ${command}`);
-      }
+      console.warn(`⚠️ 실패 (${attempt}/${retries + 1}): ${command}`);
+      if (attempt > retries) return false;
     }
   }
 }
 
-(async () => {
-  const res = await fetch(`${BASE_URL}/wp-json/wp/v2/posts?per_page=100&_fields=id`);
-  const posts = await res.json();
-  const sortedPosts = posts.sort((a, b) => a.id - b.id);
+async function main() {
+  const postIds = fs.readFileSync('post_ids.txt', 'utf-8')
+    .split('\n')
+    .filter(Boolean);
 
-  if (!fs.existsSync(OUTPUT_DIR)) {
-    fs.mkdirSync(OUTPUT_DIR);
-  }
+  if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR);
 
-  const batches = [];
-  for (let i = 0; i < sortedPosts.length; i += BATCH_SIZE) {
-    batches.push(sortedPosts.slice(i, i + BATCH_SIZE));
-  }
+  for (const id of postIds) {
+    const desktopFile = `${OUTPUT_DIR}/${id}-desktop.css`;
+    const mobileFile = `${OUTPUT_DIR}/${id}-mobile.css`;
 
-  for (const batch of batches) {
-    const successfulPosts = [];
+    const desktopCommand = `npx critical ${BASE_URL}/?p=${id} --width=1300 --height=900 --minify --extract --timeout=30000 --timeoutRetry --target=${desktopFile}`;
+    const mobileCommand = `npx critical ${BASE_URL}/?p=${id} --width=390 --height=800 --minify --extract --timeout=30000 --timeoutRetry --target=${mobileFile}`;
 
-    for (const post of batch) {
-      const postId = post.id;
-      const url = `${BASE_URL}/?p=${postId}`;
-      console.log(`🔍 Generating critical CSS for post ID: ${postId}`);
+    console.log(`🔧 ${id} - 데스크탑`);
+    const desktopSuccess = await runCriticalWithTimeout(desktopCommand, TIMEOUT_MS, RETRIES);
 
-      const desktopCmd = `npx critical ${url} --width=1300 --height=900 --extract --target=${OUTPUT_DIR}/${postId}_desktop.css`;
-      const mobileCmd  = `npx critical ${url} --width=375 --height=667 --extract --target=${OUTPUT_DIR}/${postId}_mobile.css`;
+    console.log(`🔧 ${id} - 모바일`);
+    const mobileSuccess = await runCriticalWithTimeout(mobileCommand, TIMEOUT_MS, RETRIES);
 
-      const desktopSuccess = await runCriticalWithTimeout(desktopCmd, TIMEOUT, 1);
-      const mobileSuccess  = await runCriticalWithTimeout(mobileCmd, TIMEOUT, 1);
-
-      if (desktopSuccess && mobileSuccess) {
-        successfulPosts.push(postId);
-      } else {
-        console.warn(`⚠️ Skipped post ${postId} due to failure`);
-      }
-    }
-
-    // FTP 업로드
-    const client = new ftp.Client();
-    client.ftp.verbose = false;
-
-    try {
-      await client.access({
-        host: FTP_HOST,
-        user: FTP_USER,
-        password: FTP_PASS,
-        port: 21,
-        secure: false,
-      });
-
-      for (const postId of successfulPosts) {
-        try {
-          await client.uploadFrom(`${OUTPUT_DIR}/${postId}_desktop.css`, `${REMOTE_DIR}/${postId}_desktop.css`);
-          await client.uploadFrom(`${OUTPUT_DIR}/${postId}_mobile.css`, `${REMOTE_DIR}/${postId}_mobile.css`);
-          console.log(`✅ Uploaded CSS for post ${postId}`);
-        } catch (err) {
-          console.error(`❌ FTP upload failed for post ${postId}:`, err.message);
-        }
-      }
-
-      client.close();
-    } catch (err) {
-      console.error("❌ FTP connection failed:", err.message);
+    if (!desktopSuccess || !mobileSuccess) {
+      console.log(`⏭️ ${id} - 타임아웃으로 생성을 건너뜁니다.`);
     }
   }
-})();
+}
+
+main();
