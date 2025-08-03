@@ -6,7 +6,7 @@ const path = require('path');
 
 const BASE_URL = 'https://mathpowergen.com';
 const OUTPUT_DIR = 'output';
-const REMOTE_DIR = '/wp-content/critical-css';
+const REMOTE_DIR = '/www/wp-content/critical-css';
 
 const {
   SFTP_HOST,
