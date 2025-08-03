@@ -35,7 +35,7 @@ execSync(`npx critical ${url} --width=1300 --height=900 --extract --target=${OUT
 
 // Mobile
 execSync(`npx critical ${url} --width=375 --height=667 --extract --target=${OUTPUT_DIR}/${postId}_mobile.css`);
-
+  }
   // FTP 업로드
   await sftp.connect({
     host: SFTP_HOST,
