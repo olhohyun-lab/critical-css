@@ -2,7 +2,7 @@ name: Generate Critical CSS
 
 on:
   schedule:
-    - cron: '0 20 * * *'  # 매일 오전 5시 (한국 시간 UTC+9 → UTC 20시)
+    - cron: '0 20 * * *'  # 매일 오전 5시 (한국시간)
   workflow_dispatch:
 
 jobs:
@@ -10,21 +10,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v3
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20'
+          node-version: 20
 
       - name: Install dependencies
         run: npm install
 
-      - name: Generate and upload critical CSS
+      - name: Generate & Upload critical CSS
         env:
           SFTP_HOST: ${{ secrets.SFTP_HOST }}
-          SFTP_PORT: ${{ secrets.SFTP_PORT }}
           SFTP_USER: ${{ secrets.SFTP_USER }}
           SFTP_PASS: ${{ secrets.SFTP_PASS }}
         run: npm run generate
