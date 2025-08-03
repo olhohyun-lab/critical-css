@@ -30,9 +30,9 @@ const {
     console.log(`🔍 Generating critical CSS for post ID: ${postId}`);
 
     // Desktop
-    execSync(`npx critical ${url} --width=1300 --height=900 --timeout=60000 -o ${OUTPUT_DIR}/${postId}_desktop.css`);
+    execSync(`npx critical ${url} --width=1300 --height=900 -o ${OUTPUT_DIR}/${postId}_desktop.css`);
     // Mobile
-    execSync(`npx critical ${url} --width=375 --height=667 --timeout=60000 -o ${OUTPUT_DIR}/${postId}_mobile.css`);
+    execSync(`npx critical ${url} --width=375 --height=667 -o ${OUTPUT_DIR}/${postId}_mobile.css`);
   }
 
   // FTP 업로드
