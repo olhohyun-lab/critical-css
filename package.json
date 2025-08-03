@@ -1,0 +1,12 @@
+{
+  "name": "critical-css-generator",
+  "version": "1.0.0",
+  "description": "Generate and collect critical CSS from WordPress posts",
+  "scripts": {
+    "generate": "node generate.js"
+  },
+  "dependencies": {
+    "basic-ftp": "^5.0.4",
+    "node-fetch": "^2.6.7"
+  }
+}
